@@ -5,8 +5,12 @@ from pathlib import Path
 from typing import List, Dict, Optional
 import re
 import xml.etree.ElementTree as ET
+import argparse
 
-BETA_TEST = True
+parser = argparse.ArgumentParser()
+parser.add_argument('--num_papers', type=int, default=50, help='Number of papers to download')
+args = parser.parse_args()
+
 conference_json_file = "all_papers.json"
 output_dir = "papers"
 
@@ -120,18 +124,19 @@ class ArxivPDFDownloader:
     
     def download_papers(self, papers: List[Dict], delay: float = 3.0):
         
+        success_count = 0
         for i, paper in enumerate(papers, 1):
             print(f"[{i}/{len(papers)}] {paper['title'][:60]}")
             try:
                 self.process_paper(paper)
+                success_count += 1
+                if success_count >= args.num_papers:
+                    break
             except Exception as e:
                 print(f"Error processing paper: {e}")
             
-            if i < len(papers):
-                time.sleep(delay)
+            time.sleep(delay)
 
-            if BETA_TEST and i >= 50:
-                break
         
         return papers
 
