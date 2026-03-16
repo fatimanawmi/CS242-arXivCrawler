@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>IR Search Comparison</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            line-height: 1.5;
+            background: #f7f7f9;
+        }
+
+        .page {
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #555;
+            margin-bottom: 20px;
+        }
+
+        .search-box {
+            background: white;
+            padding: 18px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 24px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .field label {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 6px;
+        }
+
+        .field input {
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            min-width: 160px;
+        }
+
+        .field.query-field input {
+            min-width: 420px;
+        }
+
+        button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background: #222;
+            color: white;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 18px;
+            min-height: 400px;
+        }
+
+        .panel h2 {
+            margin-top: 0;
+            margin-bottom: 8px;
+        }
+
+        .panel-desc {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .result {
+            border: 1px solid #e3e3e3;
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 14px;
+            background: #fcfcfc;
+        }
+
+        .result h3 {
+            margin: 6px 0 8px 0;
+            font-size: 18px;
+        }
+
+        .result a {
+            text-decoration: none;
+            color: #0b57d0;
+        }
+
+        .meta {
+            font-size: 14px;
+            color: #444;
+            margin-bottom: 8px;
+        }
+
+        .score {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+        }
+
+        .error {
+            padding: 10px 12px;
+            border-radius: 6px;
+            background: #ffe8e8;
+            color: #8a1f1f;
+            margin-bottom: 12px;
+        }
+
+        .empty {
+            color: #666;
+            font-style: italic;
+        }
+
+        @media (max-width: 1100px) {
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .field.query-field input {
+                min-width: 260px;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <h1>Paper Search: Sparse vs Dense</h1>
+    <div class="subtitle">
+        Compare BM25/PyLucene results against BERT+FAISS dense retrieval results.
+    </div>
+
+    <div class="search-box">
+        <form method="get">
+            <div class="form-row">
+                <div class="field query-field">
+                    <label for="q">Query</label>
+                    <input type="text" id="q" name="q" value="{{ query }}" placeholder="Enter search query">
+                </div>
+
+                <div class="field">
+                    <label for="k">Top K</label>
+                    <input type="number" id="k" name="k" value="{{ k }}" min="1" max="50">
+                </div>
+
+                <div class="field">
+                    <label for="year_min">Year Min</label>
+                    <input type="number" id="year_min" name="year_min" value="{{ year_min }}" placeholder="e.g. 2020">
+                </div>
+
+                <div class="field">
+                    <label for="year_max">Year Max</label>
+                    <input type="number" id="year_max" name="year_max" value="{{ year_max }}" placeholder="e.g. 2025">
+                </div>
+
+                <div class="field">
+                    <button type="submit">Search</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    {% if query %}
+    <div class="results-grid">
+        <div class="panel">
+            <h2>Sparse Search (PyLucene / BM25)</h2>
+            <div class="panel-desc">
+                Lexical retrieval using indexed text fields and BM25 scoring.
+            </div>
+
+            {% if sparse_error %}
+                <div class="error"><strong>Error:</strong> {{ sparse_error }}</div>
+            {% endif %}
+
+            {% if sparse_results %}
+                {% for r in sparse_results %}
+                    <div class="result">
+                        <div class="score">Rank {{ r.rank }} | Score: {{ r.score }}</div>
+                        <h3>
+                            {% if r.url %}
+                                <a href="{{ r.url }}" target="_blank">{{ r.title }}</a>
+                            {% else %}
+                                {{ r.title }}
+                            {% endif %}
+                        </h3>
+
+                        <div class="meta">
+                            {% if r.authors %}<div><strong>Authors:</strong> {{ r.authors }}</div>{% endif %}
+                            {% if r.conference %}<div><strong>Conference:</strong> {{ r.conference }}</div>{% endif %}
+                            {% if r.year %}<div><strong>Year:</strong> {{ r.year }}</div>{% endif %}
+                            {% if r.doc_id %}<div><strong>Doc ID:</strong> {{ r.doc_id }}</div>{% endif %}
+                            {% if r.categories %}<div><strong>Categories:</strong> {{ r.categories|join:", " }}</div>{% endif %}
+                        </div>
+
+                        {% if r.snippet %}
+                            <p>{{ r.snippet }}</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty">No sparse results.</div>
+            {% endif %}
+        </div>
+
+        <div class="panel">
+            <h2>Dense Search (BERT / FAISS)</h2>
+            <div class="panel-desc">
+                Semantic retrieval using transformer embeddings and nearest-neighbor vector search.
+            </div>
+
+            {% if dense_error %}
+                <div class="error"><strong>Error:</strong> {{ dense_error }}</div>
+            {% endif %}
+
+            {% if dense_results %}
+                {% for r in dense_results %}
+                    <div class="result">
+                        <div class="score">Rank {{ r.rank }} | Score: {{ r.score }}</div>
+                        <h3>
+                            {% if r.url %}
+                                <a href="{{ r.url }}" target="_blank">{{ r.title }}</a>
+                            {% else %}
+                                {{ r.title }}
+                            {% endif %}
+                        </h3>
+
+                        <div class="meta">
+                            {% if r.authors %}<div><strong>Authors:</strong> {{ r.authors }}</div>{% endif %}
+                            {% if r.conference %}<div><strong>Conference:</strong> {{ r.conference }}</div>{% endif %}
+                            {% if r.year %}<div><strong>Year:</strong> {{ r.year }}</div>{% endif %}
+                            {% if r.doc_id %}<div><strong>Doc ID:</strong> {{ r.doc_id }}</div>{% endif %}
+                            {% if r.categories %}<div><strong>Categories:</strong> {{ r.categories|join:", " }}</div>{% endif %}
+                        </div>
+
+                        {% if r.snippet %}
+                            <p>{{ r.snippet }}</p>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty">No dense results.</div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+</body>
+</html>
