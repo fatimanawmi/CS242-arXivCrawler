@@ -1,0 +1,7 @@
+indexes/
+data/
+*.jsonl
+*.npy
+.DS_Store
+__pycache__/
+*.pyc
