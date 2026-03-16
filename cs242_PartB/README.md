@@ -8,7 +8,9 @@
 
 ## Requirements
 pip install faiss-cpu
+
 pip install sentence-transformers
+
 pip install torch
 
 ## How to Run
