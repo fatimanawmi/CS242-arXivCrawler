@@ -13,6 +13,7 @@ pip install torch
 
 ## How to Run
 bash indexer.sh
+
 python Code/search_dense.py
 
 ## Results
